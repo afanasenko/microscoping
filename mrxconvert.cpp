@@ -6,6 +6,7 @@
 #include <string>
 #include <fstream>
 #include <Windows.h>
+#include "writer.h"
 
 using namespace std;
 
@@ -64,6 +65,8 @@ int _tmain(int argc, wchar_t* argv[])
 
 	int num_levels = openslide_get_level_count(datablock);
 	printf("Levels: %d\n", num_levels);
+
+	WriterTest();
 	
 	return 0;
 }
