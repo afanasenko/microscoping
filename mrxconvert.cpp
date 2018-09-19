@@ -5,6 +5,7 @@
 #include "openslide.h"
 #include <string>
 #include <fstream>
+#include <vector>
 #include <Windows.h>
 #include "writer.h"
 
@@ -40,6 +41,15 @@ int _tmain(int argc, wchar_t* argv[])
 {
 	std::string filename;
 
+	bool test_mode = false;
+	if (argc > 2)
+	{
+		std::wstring s(argv[2]);
+		if (s == L"-t")
+			test_mode = true;
+		printf("Test mode on\n");
+	}
+
 	if (argc > 1)
 	{
 		filename = utf8_encode(argv[1]);
@@ -66,7 +76,32 @@ int _tmain(int argc, wchar_t* argv[])
 	int num_levels = openslide_get_level_count(datablock);
 	printf("Levels: %d\n", num_levels);
 
-	WriterTest();
+	for (int lvl = 0; lvl < num_levels; ++lvl)
+	{
+		int64_t level_width, level_height;
+		openslide_get_level_dimensions(datablock, lvl, &level_width, &level_height);
+		printf("Level %d: %d x %d\n", lvl, (int)level_width, (int)level_height);
+
+		if (min(level_width, level_height) < 1000)
+		{
+			std::vector<uint32_t> buf(level_width*level_height);
+			openslide_read_region(
+				datablock,
+				buf.data(),
+				0, 0,
+				lvl,
+				level_width, level_height
+			);
+
+			std::vector<char>rgb_buf;
+			printf("writer test\n");
+			ConvertArgbToRgb((const char*)buf.data(), level_width, level_height, rgb_buf);
+			printf("Converted buffer: %zd bytes\n", rgb_buf.size());
+
+			WriterTest((const uint32_t*)rgb_buf.data(), level_width, level_height);
+			break;
+		}
+	}
 	
 	return 0;
 }
