@@ -12,6 +12,34 @@
 
 using namespace std;
 
+std::vector<std::string> split(const std::string &s, char delim) {
+	std::stringstream ss(s);
+	std::string item;
+	std::vector<std::string> elems;
+	while (std::getline(ss, item, delim)) {
+		elems.push_back(item);
+		// elems.push_back(std::move(item));
+	}
+	return elems;
+}
+
+std::string join(std::vector<std::string> const & strings, char delim) {
+	if (!strings.size())
+		return "";
+	std::string ret = strings[0];
+	for (auto s = strings.begin() + 1; s != strings.end(); ++s)
+		ret += std::string(1, delim) + *s;
+	return ret;
+}
+
+std::string insert_filename_suffix(std::string filename, std::string suffix) {
+	auto parts = split(filename, '.');
+	auto n = parts.size();
+	if (n > 1)
+		parts.insert(parts.end() - 1, suffix);
+	return join(parts, '.');
+}
+
 // Проверка на существование файла
 bool fexists(const char *filename) {
   std::ifstream ifile(filename);
@@ -75,10 +103,16 @@ int _tmain(int argc, wchar_t* argv[])
 		return 1;
 	}
 
-	if (!mrx.WriteDicomFile(dicom_filename.c_str(), 6))
+	int start_from_level = 4;
+
+	for (int level = start_from_level; level < mrx.GetLevelCount(); ++level)
 	{
-		printf("File not written\n");
-		return 1;
+		std::string level_file = insert_filename_suffix(dicom_filename, std::to_string(level));
+		if (!mrx.WriteDicomFile(level_file.c_str(), level))
+		{
+			printf("File %s not written\n", level_file.c_str());
+			return 1;
+		}
 	}
 
 	return 0;

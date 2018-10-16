@@ -565,6 +565,8 @@ bool MiraxWrapper::FillVariables(gdcm::DataSet & ds)
 	ds.Insert(DicomAnyString(0x08, 0x30, gdcm::VR::TM, tm_str));
 
 	// Study Instance UID
+	printf("study %s\n", study_instance_uid.c_str());
+	printf("series %s\n", series_instance_uid.c_str());
 	ds.Insert(DicomAnyString(0x20, 0x0d, gdcm::VR::UI, study_instance_uid.c_str(), false));
 
 	// Series date, time and ID
