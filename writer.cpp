@@ -2,10 +2,14 @@
 //
 #include "stdafx.h"
 
+#include <time.h>
+#include <algorithm>
+
 #include <gdcmFile.h>
 #include <gdcmImage.h>
 #include <gdcmTag.h>
 #include "gdcmDataElement.h"
+#include "gdcmAttribute.h"
 #include "gdcmByteValue.h"
 #include "gdcmPixelFormat.h"
 #include "gdcmImageWriter.h"
@@ -15,153 +19,206 @@
 #include "gdcmImageWriter.h"
 #include "gdcmFileDerivation.h"
 #include "gdcmUIDGenerator.h"
+#include "gdcmTag.h"
+#include "gdcmMediaStorage.h"
+#include "gdcmImageHelper.h"
+#include "gdcmRAWCodec.h"
+#include "gdcmBasicOffsetTable.h"
 
+#include "writer.h"
 
-bool ConvertArgbToRgb(char const *argb, int width, int height, std::vector<char> &ret)
+//-----------------------------------------------------------------------------
+// Примитивный конвертер из ARGB32 в RGB24
+bool ConvertArgbToRgb(char const *argb, int width, int height, std::vector<char> &ret, size_t maxlen)
 {
 	int bpp = 3;
 	ret.resize(width*height*bpp);
 
-	int src_len = width * height * 4;
-	printf("%d\n", src_len);
-	for (int i = 0, j = 0; i < src_len; i += 4, j += 3)
+	char * rgb = ret.data();
+	for (int i = 0; i < width*height; ++i)
 	{
-		ret[j] = argb[1];
-		ret[j + 1] = argb[2];
-		ret[j + 2] = argb[3];
-		argb += 4;
+		if (i < maxlen)
+		{
+			*rgb++ = argb[0];
+			*rgb++ = argb[1];
+			*rgb++ = argb[2];
+			argb += 4;
+		}
+		else
+		{
+			*rgb++ = 0xff;
+			*rgb++ = 0xff;
+			*rgb++ = 0xff;
+		}
 	}
-	printf("Done\n");
 	return true;
 }
 
-bool CreateTestImage(gdcm::SmartPointer<gdcm::Image> im, int width, int height)
+bool IsEmptyBuf(std::vector<char> const & buf)
 {
-	im->SetNumberOfDimensions(2);
-	im->SetDimension(0, width);
-	im->SetDimension(1, height);
-	int bpp = 3;
+	bool flag = true;
+	for (int i = 0; i < buf.size(); ++i)
+		if (buf[i])
+			return false;
+}
 
-	im->GetPixelFormat().SetSamplesPerPixel(bpp);
-	im->SetPhotometricInterpretation(gdcm::PhotometricInterpretation::RGB);
 
-	unsigned long len = im->GetBufferLength();
-	if (len != width * height * bpp)
+/// when writing a raw file, we know the full extent, and can just write the first
+/// 12 bytes out (the tag, the VR, and the size)
+/// when we do compressed files, we'll do it in chunks, as described in
+/// 2009-3, part 5, Annex A, section 4.
+/// Pass the raw codec so that in the rare case of a bigendian explicit raw,
+/// the first 12 bytes written out should still be kosher.
+/// returns -1 if there's any failure, or the complete offset (12 bytes)
+/// if it works.  Those 12 bytes are then added to the position in order to determine
+/// where to write.
+void WriteRawHeader(std::ostream * of)
+{
+	uint16_t firstTag = 0x7fe0;
+	uint16_t secondTag = 0x0010;
+	uint16_t thirdTag = 0x424f; // OB
+	uint16_t fourthTag = 0x0000;
+	uint32_t fifthTag = 0xffffffff;
+
+	//basic offset table (empty)
+	uint16_t sixthTag = 0xfffe;
+	uint16_t seventhTag = 0xe000;
+	uint32_t botsize = 0;
+
+
+	const int theBufferSize = 4 * sizeof(uint16_t) + sizeof(uint32_t) + 2 * sizeof(uint16_t) + sizeof(uint32_t) + botsize;
+	char* tmpBuffer1 = new char[theBufferSize];
+
+	memcpy(&(tmpBuffer1[0]), &firstTag, sizeof(uint16_t));
+	memcpy(&(tmpBuffer1[sizeof(uint16_t)]), &secondTag, sizeof(uint16_t));
+	memcpy(&(tmpBuffer1[2 * sizeof(uint16_t)]), &thirdTag, sizeof(uint16_t));
+	memcpy(&(tmpBuffer1[3 * sizeof(uint16_t)]), &fourthTag, sizeof(uint16_t));
+
+	//Addition by Manoj
+	memcpy(&(tmpBuffer1[4 * sizeof(uint16_t)]), &fifthTag, sizeof(uint32_t));// Data Element Length 4 bytes
+
+																				// Basic OffSet Tabl with 16 Item Value
+	memcpy(&(tmpBuffer1[4 * sizeof(uint16_t) + sizeof(uint32_t)]), &sixthTag, sizeof(uint16_t)); //fffe
+	memcpy(&(tmpBuffer1[5 * sizeof(uint16_t) + sizeof(uint32_t)]), &seventhTag, sizeof(uint16_t));//e000
+	memcpy(&(tmpBuffer1[6 * sizeof(uint16_t) + sizeof(uint32_t)]), &botsize, sizeof(uint32_t));
+
+	of->write(tmpBuffer1, theBufferSize);
+	of->flush();
+}
+
+bool WriteRawSlice(
+	const char * buf, 
+	const std::size_t & buf_size, 
+	std::ofstream * of, 
+	gdcm::PixelFormat pixelInfo,
+	const gdcm::TransferSyntax & ts,
+	unsigned int slice_width,
+	unsigned int slice_height,
+	gdcm::PhotometricInterpretation const & pi
+	)
+{
+	int bytesPerPixel = pixelInfo.GetPixelSize();
+
+	//set up the codec prior to resetting the file, just in case that affects the way that
+	//files are handled by the ImageHelper
+
+	gdcm::RAWCodec theCodec;
+	if (!theCodec.CanDecode(ts) || ts == gdcm::TransferSyntax::ExplicitVRBigEndian)
 	{
+		gdcmErrorMacro("Only RAW for now");
 		return false;
 	}
 
-	std::vector<char> buffer(width * height * bpp);
-	char * p = buffer.data();
-	int b = 128;
+	unsigned int d[3] = { slice_height, slice_width, 1 };
 
-	int rgb[3];
+	theCodec.SetNeedByteSwap(ts == gdcm::TransferSyntax::ImplicitVRBigEndianPrivateGE);
+	theCodec.SetDimensions(d);
+	// color - by - pixel
+	theCodec.SetPlanarConfiguration(0);
+	theCodec.SetPhotometricInterpretation(pi);
 
-	for (int r = 0; r < width; ++r)
-		for (int g = 0; g < height; ++g)
-		{
-			rgb[0] = 128;
-			rgb[1] = g % 0xff;
-			rgb[2] = b;
 
-			*p++ = (char)rgb[0];
-			*p++ = (char)rgb[1];
-			*p++ = (char)rgb[2];
+	//have to reset the stream to the proper position
+	//first, reopen the stream,then the loop should set the right position
+	//MM: you have to reopen the stream, by default, the writer closes it each time it writes.
+	//std::ostream* theStream = mWriter.GetStreamPtr();//probably going to need a copy of this
+													 //to ensure thread safety; if the stream ptr handler gets used simultaneously by different threads,
+													 //that would be BAD
+													 //tmpBuffer is for a single raster
+	assert(of && *of);
+
+
+	uint16_t NinthTag = 0xfffe;
+	uint16_t TenthTag = 0xe000;
+
+	uint32_t sizeTag = slice_width * slice_height * bytesPerPixel;
+
+	const int theBufferSize1 = 2 * sizeof(uint16_t) + sizeof(uint32_t);
+
+	char* tmpBuffer3 = new char[theBufferSize1];
+	char* tmpBuffer4 = new char[theBufferSize1];
+
+	try {
+
+		memcpy(&(tmpBuffer3[0]), &NinthTag, sizeof(uint16_t)); //fffe
+		memcpy(&(tmpBuffer3[sizeof(uint16_t)]), &TenthTag, sizeof(uint16_t)); //e000
+
+		memcpy(&(tmpBuffer3[2 * sizeof(uint16_t)]), &sizeTag, sizeof(uint32_t));//Item Length
+																				//run that through the codec
+		if (!theCodec.DecodeBytes(tmpBuffer3, theBufferSize1,
+			tmpBuffer4, theBufferSize1)) {
+			delete[] tmpBuffer3;
+			gdcmErrorMacro("Problems in Header");
+			delete[] tmpBuffer4;
+			return false;
 		}
 
-	gdcm::DataElement pixeldata(gdcm::Tag(0x7fe0, 0x0010));
-	pixeldata.SetByteValue((const char*)buffer.data(), (uint32_t)len);
+		of->write(tmpBuffer4, theBufferSize1);
+		of->flush();
+	}
+	catch (...) {
+		delete[] tmpBuffer3;
+		delete[] tmpBuffer4;
+		return false;
+	}
+	delete[] tmpBuffer3;
+	delete[] tmpBuffer4;
 
-	im->SetDataElement(pixeldata);
+	int slice_pitch = slice_width*bytesPerPixel;
+	char* tmpBuffer = new char[slice_pitch];
+	char* tmpBuffer2 = new char[slice_pitch];
+	try {
+			for (unsigned int y = 0; y < slice_height; ++y) {
+				memcpy(tmpBuffer, buf + y*slice_pitch, slice_pitch);
+
+				if (!theCodec.DecodeBytes(tmpBuffer, slice_pitch,
+					tmpBuffer2, slice_pitch)) {
+					delete[] tmpBuffer;
+					delete[] tmpBuffer2;
+					return false;
+				}
+
+				//should be appending
+
+				of->write(tmpBuffer2, slice_pitch);
+			}
+			of->flush();
+	}
+	catch (std::exception & ex) {
+		(void)ex;
+		gdcmWarningMacro("Failed to write with ex:" << ex.what());
+		delete[] tmpBuffer;
+		delete[] tmpBuffer2;
+		return false;
+	}
+	catch (...) {
+		gdcmWarningMacro("Failed to write with unknown error.");
+		delete[] tmpBuffer;
+		delete[] tmpBuffer2;
+		return false;
+	}
+	delete[] tmpBuffer;
+	delete[] tmpBuffer2;
 	return true;
 }
 
-bool CreateImage(gdcm::SmartPointer<gdcm::Image> im, uint32_t const *buffer, int w, int h)
-{
-
-	im->SetNumberOfDimensions(2);
-	im->SetDimension(0, w);
-	im->SetDimension(1, h);
-
-	im->GetPixelFormat().SetSamplesPerPixel(3);
-	im->SetPhotometricInterpretation(gdcm::PhotometricInterpretation::RGB);
-
-	unsigned long len = im->GetBufferLength();
-	if (len != w * h * 3)
-	{
-		return false;
-	}
-
-	gdcm::DataElement pixeldata(gdcm::Tag(0x7fe0, 0x0010));
-	pixeldata.SetByteValue((const char*)buffer, (uint32_t)len);
-
-	im->SetDataElement(pixeldata);
-
-	return true;
-}
-
-/*
-* This example shows two things:
-* 1. How to create an image ex-nihilo
-* 2. How to use the gdcm.FileDerivation filter. This filter is meant to create "DERIVED" image
-* object. FileDerivation has a simple API where you can reference *all* the input image that have been
-* used to generate the image. The API also allows user to specify the purpose of reference (see CID 7202,
-* PS 3.16 - 2008), and the image derivation type (CID 7203, PS 3.16 - 2008).
-*/
-bool WriterTest(uint32_t const *buffer, int width, int height)
-{
-	gdcm::SmartPointer<gdcm::Image> im = new gdcm::Image;
-	if (!CreateImage(im, buffer, width, height))
-	//if (!CreateTestImage(im, width, height))
-	{
-		std::cerr << "Create image failed" << std::endl;
-		return false;
-	}
-
-	gdcm::UIDGenerator uid; // helper for uid generation
-
-	gdcm::SmartPointer<gdcm::File> file = new gdcm::File; // empty file
-
-														  // Step 2: DERIVED object
-	gdcm::FileDerivation fd;
-	// For the pupose of this execise we will pretend that this image is referencing
-	// two source image (we need to generate fake UID for that).
-	const char sopclassuid [] = "1.2.840.10008.5.1.4.1.1.77.1.2"; // VL Microscopic Image Storage
-	auto sopinstanceuid = uid.Generate();
-
-	fd.AddReference(sopclassuid, sopinstanceuid);
-
-
-	// Again for the purpose of the exercise we will pretend that the image is a
-	// multiplanar reformat (MPR):
-	// CID 7202 Source Image Purposes of Reference
-	// {"DCM",121322,"Source image for image processing operation"},
-	fd.SetPurposeOfReferenceCodeSequenceCodeValue(121322);
-	// CID 7203 Image Derivation
-	// { "DCM",113072,"Multiplanar reformatting" },
-	fd.SetDerivationCodeSequenceCodeValue(113072);
-	fd.SetFile(*file);
-	// If all Code Value are ok the filter will execute properly
-	if (!fd.Derive())
-	{
-		std::cerr << "Sorry could not derive using input info" << std::endl;
-		return false;
-	}
-
-	// We pass both :
-	// 1. the fake generated image
-	// 2. the 'DERIVED' dataset object
-	// to the writer.
-	gdcm::ImageWriter w;
-	w.SetImage(*im);
-	w.SetFile(fd.GetFile());
-
-	// Set the filename:
-	w.SetFileName("ybr2.dcm");
-	if (!w.Write())
-	{
-		return true;
-	}
-
-	return false;
-}

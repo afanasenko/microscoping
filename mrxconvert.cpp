@@ -8,6 +8,7 @@
 #include <vector>
 #include <Windows.h>
 #include "writer.h"
+#include "mirax_wrapper.h"
 
 using namespace std;
 
@@ -40,15 +41,7 @@ std::wstring utf8_decode(const std::string &str)
 int _tmain(int argc, wchar_t* argv[])
 {
 	std::string filename;
-
-	bool test_mode = false;
-	if (argc > 2)
-	{
-		std::wstring s(argv[2]);
-		if (s == L"-t")
-			test_mode = true;
-		printf("Test mode on\n");
-	}
+	std::string dicom_filename;
 
 	if (argc > 1)
 	{
@@ -64,45 +57,30 @@ int _tmain(int argc, wchar_t* argv[])
 		printf("Input file not specified\n");
 		return 1;
 	}
-	
-	auto datablock = openslide_open(filename.c_str());
-	
-	if (!datablock)
+
+	if (argc > 2)
 	{
-		printf("Error reading file %s\n", filename.c_str());
+		dicom_filename = utf8_encode(argv[2]);
+	}
+	else
+	{
+		printf("Output file not specified\n");
+		return 1;
+	}
+	
+	MiraxWrapper mrx;
+	if (!mrx.Open(filename.c_str()))
+	{
+		printf("File not opened\n");
 		return 1;
 	}
 
-	int num_levels = openslide_get_level_count(datablock);
-	printf("Levels: %d\n", num_levels);
-
-	for (int lvl = 0; lvl < num_levels; ++lvl)
+	if (!mrx.WriteDicomFile(dicom_filename.c_str(), 6))
 	{
-		int64_t level_width, level_height;
-		openslide_get_level_dimensions(datablock, lvl, &level_width, &level_height);
-		printf("Level %d: %d x %d\n", lvl, (int)level_width, (int)level_height);
-
-		if (min(level_width, level_height) < 1000)
-		{
-			std::vector<uint32_t> buf(level_width*level_height);
-			openslide_read_region(
-				datablock,
-				buf.data(),
-				0, 0,
-				lvl,
-				level_width, level_height
-			);
-
-			std::vector<char>rgb_buf;
-			printf("writer test\n");
-			ConvertArgbToRgb((const char*)buf.data(), level_width, level_height, rgb_buf);
-			printf("Converted buffer: %zd bytes\n", rgb_buf.size());
-
-			WriterTest((const uint32_t*)rgb_buf.data(), level_width, level_height);
-			break;
-		}
+		printf("File not written\n");
+		return 1;
 	}
-	
+
 	return 0;
 }
 
