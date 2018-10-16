@@ -159,6 +159,9 @@ bool MiraxWrapper::Open(const char * filename)
 		pyramid.push_back(PyramidLevel((int)width, (int)height, downsample));
 	}
 
+	study_instance_uid = uidgen.Generate();
+	series_instance_uid = uidgen.Generate();
+
 	return true;
 }
 
@@ -362,7 +365,7 @@ bool MiraxWrapper::AddPerFrameFunctionalGroups(gdcm::DataSet & ds, int level)
 
 bool MiraxWrapper::Multiframe(gdcm::DataSet & ds)
 {
-	const char *dimension_uid = uid.Generate();
+	const char *dimension_uid = uidgen.Generate();
 
 	//Dimension organization sequence
 	gdcm::Item it;
@@ -413,7 +416,7 @@ bool MiraxWrapper::FillWholslideImageModule(gdcm::DataSet & ds, int level)
 	auto tiles = pyramid[level].GetTiles(tile_width, tile_height);
 
 	// SOP Instance UID
-	const char *sopuid = uid.Generate();
+	const char *sopuid = uidgen.Generate();
 	ds.Insert(DicomAnyString(0x08, 0x18, gdcm::VR::UI, sopuid, false));
 
 	//SOP Class UID 
@@ -562,19 +565,14 @@ bool MiraxWrapper::FillVariables(gdcm::DataSet & ds)
 	ds.Insert(DicomAnyString(0x08, 0x30, gdcm::VR::TM, tm_str));
 
 	// Study Instance UID
-	const char *study_instance_id = uid.Generate();
-	ds.Insert(DicomAnyString(0x20, 0x0d, gdcm::VR::UI, study_instance_id, false));
+	ds.Insert(DicomAnyString(0x20, 0x0d, gdcm::VR::UI, study_instance_uid.c_str(), false));
 
 	// Series date, time and ID
 	ds.Insert(DicomAnyString(0x08, 0x21, gdcm::VR::DA, da_str));
 	ds.Insert(DicomAnyString(0x08, 0x31, gdcm::VR::TM, tm_str));
 
 	// Series Instance UID
-	gdcm::DataElement ser_instance_id(gdcm::Tag(0x20, 0x0e));
-	ser_instance_id.SetVR(gdcm::VR::UI);
-	const char *ser_uid = uid.Generate();
-	ser_instance_id.SetByteValue(ser_uid, (uint32_t)strlen(ser_uid));
-	ds.Insert(ser_instance_id);
+	ds.Insert(DicomAnyString(0x20, 0x0e, gdcm::VR::UI, series_instance_uid.c_str(), false));
 
 	// Acquisition datetime
 	gdcm::DataElement acqdt(gdcm::Tag(0x08, 0x2a));

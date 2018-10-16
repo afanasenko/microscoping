@@ -112,11 +112,15 @@ private:
 	int level_count;
 	openslide_t * openslide_handle;
 	std::vector<PyramidLevel> pyramid;
-	gdcm::UIDGenerator uid;
+	gdcm::UIDGenerator uidgen;
 	int slice_thickness;
 	gdcm::PixelFormat pixel_format;
 	gdcm::TransferSyntax transfer_syntax;
 	int x_offset_slide;
 	int y_offset_slide;
+	// Для каждой mirax-картинки назначается пара Series/Instance uid
+	std::string study_instance_uid;
+	std::string series_instance_uid;
+
 };
 
