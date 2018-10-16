@@ -122,11 +122,34 @@ bool MiraxWrapper::Open(const char * filename)
 		int64_t width, height;
 		openslide_get_level_dimensions(openslide_handle, lvl, &width, &height);
 		double downsample = openslide_get_level_downsample(openslide_handle, lvl);
+		/*
+		std::map<std::string, std::string> properties;
 
-		//openslide_get_property_names(openslide_handle);
-		const char * spacing_x = openslide_get_property_value(openslide_handle, "MICROMETER_PER_PIXEL_X");
+		auto s = openslide_get_property_names(openslide_handle);
+		for (int i = 0; i < 1000; ++i)
+		{
+			try
+			{
+				printf("%s\n", s[i]);
+			}
+			catch (...) 
+			{
+				break;
+			}
+		}
+		*/
+		char propname[128];
+		sprintf(propname, "mirax.LAYER_0_LEVEL_%d_SECTION.MICROMETER_PER_PIXEL_X", lvl);
+		const char * spacing_x = openslide_get_property_value(openslide_handle, propname);
+		sprintf(propname, "mirax.LAYER_0_LEVEL_%d_SECTION.MICROMETER_PER_PIXEL_Y", lvl);
+		const char * spacing_y = openslide_get_property_value(openslide_handle, propname);
+
+		LevelInfo level_info((int)width, (int)height, downsample);
+		// micrometers to millimeters
 		if (spacing_x)
-			printf("%s\n", spacing_x);
+			level_info.pixel_spacing_x = 0.001 * atof(spacing_x);
+		if(spacing_y)
+			level_info.pixel_spacing_y = 0.001 * atof(spacing_y);
 
 		pyramid.push_back(LevelInfo((int)width, (int)height, downsample));
 	}
