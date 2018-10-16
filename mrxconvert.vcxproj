@@ -148,6 +148,7 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="dicom_helpers.h" />
     <ClInclude Include="iccprofile.h" />
     <ClInclude Include="mirax_wrapper.h" />
     <ClInclude Include="stdafx.h" />
