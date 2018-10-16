@@ -3,14 +3,12 @@
 #include "gdcmPixelFormat.h"
 #include "gdcmPhotometricInterpretation.h"
 
-bool ConvertArgbToRgb(char const *argb, int width, int height, std::vector<char> &ret, size_t maxlen);
-
-bool IsEmptyBuf(std::vector<char> const & buf);
+bool ConvertArgbToRgb(const uint8_t * argb, int width, int height, std::vector<uint8_t> & ret, uint32_t fill_color);
 
 void WriteRawHeader(std::ostream * of);
 
 bool WriteRawSlice(
-	const char * buf,
+	const uint8_t * buf,
 	const std::size_t & buf_size,
 	std::ofstream * of,
 	gdcm::PixelFormat pixelInfo,

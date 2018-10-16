@@ -29,39 +29,37 @@
 
 //-----------------------------------------------------------------------------
 // Примитивный конвертер из ARGB32 в RGB24
-bool ConvertArgbToRgb(char const *argb, int width, int height, std::vector<char> &ret, size_t maxlen)
+bool ConvertArgbToRgb(const uint8_t * argb, int width, int height, std::vector<uint8_t> & ret, uint32_t fill_color )
 {
 	int bpp = 3;
 	ret.resize(width*height*bpp);
 
-	char * rgb = ret.data();
+	uint8_t * bgrfill = (uint8_t*)&fill_color;
+
+	uint8_t * rgb = ret.data();
 	for (int i = 0; i < width*height; ++i)
 	{
-		if (i < maxlen)
+		uint8_t b = argb[0];
+		uint8_t g = argb[1];
+		uint8_t r = argb[2];
+		argb += 4;
+
+		if (b | g | r)
 		{
-			*rgb++ = argb[0];
-			*rgb++ = argb[1];
-			*rgb++ = argb[2];
-			argb += 4;
+			*rgb++ = b;
+			*rgb++ = g;
+			*rgb++ = r;
 		}
 		else
 		{
-			*rgb++ = 0xff;
-			*rgb++ = 0xff;
-			*rgb++ = 0xff;
+			*rgb++ = bgrfill[0];
+			*rgb++ = bgrfill[1];
+			*rgb++ = bgrfill[2];
 		}
+
 	}
 	return true;
 }
-
-bool IsEmptyBuf(std::vector<char> const & buf)
-{
-	bool flag = true;
-	for (int i = 0; i < buf.size(); ++i)
-		if (buf[i])
-			return false;
-}
-
 
 /// when writing a raw file, we know the full extent, and can just write the first
 /// 12 bytes out (the tag, the VR, and the size)
@@ -107,7 +105,7 @@ void WriteRawHeader(std::ostream * of)
 }
 
 bool WriteRawSlice(
-	const char * buf, 
+	const uint8_t * buf, 
 	const std::size_t & buf_size, 
 	std::ofstream * of, 
 	gdcm::PixelFormat pixelInfo,

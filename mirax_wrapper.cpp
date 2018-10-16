@@ -144,20 +144,25 @@ bool MiraxWrapper::Open(const char * filename)
 		sprintf(propname, "mirax.LAYER_0_LEVEL_%d_SECTION.MICROMETER_PER_PIXEL_Y", lvl);
 		const char * spacing_y = openslide_get_property_value(openslide_handle, propname);
 
-		LevelInfo level_info((int)width, (int)height, downsample);
+		PyramidLevel level_info((int)width, (int)height, downsample);
 		// micrometers to millimeters
 		if (spacing_x)
 			level_info.pixel_spacing_x = 0.001 * atof(spacing_x);
 		if(spacing_y)
 			level_info.pixel_spacing_y = 0.001 * atof(spacing_y);
 
-		pyramid.push_back(LevelInfo((int)width, (int)height, downsample));
+		sprintf(propname, "mirax.LAYER_0_LEVEL_%d_SECTION.IMAGE_FILL_COLOR_BGR", lvl);
+		const char * fill_color = openslide_get_property_value(openslide_handle, propname);
+		if (fill_color)
+			level_info.fill_color_bgr = atoi(fill_color);
+
+		pyramid.push_back(PyramidLevel((int)width, (int)height, downsample));
 	}
 
 	return true;
 }
 
-std::vector<char> MiraxWrapper::GetTileData(int level, int tile)
+bool MiraxWrapper::GetTileData(std::vector<uint8_t> & outbuf, int level, int tile)
 {
 	auto tiles = pyramid[level].GetTiles(tile_width, tile_height);
 
@@ -173,10 +178,9 @@ std::vector<char> MiraxWrapper::GetTileData(int level, int tile)
 		tile_width, tile_height
 	);
 
-	std::vector<char> rgb_buf;
-	ConvertArgbToRgb((const char*)argb_buf.data(), tile_width, tile_height, rgb_buf, argb_buf.size());
+	ConvertArgbToRgb((uint8_t*)argb_buf.data(), tile_width, tile_height, outbuf, pyramid[level].fill_color_bgr);
 
-	return rgb_buf;
+	return true;
 }
 
 bool InsertSequence(gdcm::DataSet & ds, gdcm::SmartPointer<gdcm::SequenceOfItems> & sq, uint16_t group, uint16_t elem)
@@ -600,15 +604,21 @@ bool MiraxWrapper::WriteDicomFile(const char * filename, int level)
 	file.GetHeader().SetDataSetTransferSyntax(transfer_syntax);
 
 	if (!FillWholslideImageModule(ds, level))
+	{
+		printf("FillWholslideImageModule failed\n");
 		return false;
+	}
 
 	if (!FillVariables(ds))
+	{
+		printf("FillVariables failed\n");
 		return false;
+	}
 
 	stream_writer.SetFile(file);
 
 	if (!stream_writer.WriteImageInformation()) {
-		std::cerr << "unable to write image information" << std::endl;
+		printf("WriteImageInformation failed\n");
 		return false;
 	}
 
@@ -617,17 +627,20 @@ bool MiraxWrapper::WriteDicomFile(const char * filename, int level)
 
 	//
 	WriteRawHeader(&of);
-
+	std::vector<uint8_t> tilebuf;
 	for (int ntile = 0; ntile < tiles.size(); ++ntile)
 	{
-		auto buf = GetTileData(level, ntile);
+		if (!GetTileData(tilebuf, level, ntile))
+		{
+			printf("tile %d extraction error\n", ntile);
+			return false;
+		}
 
-		if (!IsEmptyBuf(buf))
-			printf("tile %d, %zd bytes\n", ntile, buf.size());
+		printf("tile %d, %zd bytes\n", ntile, tilebuf.size());
 
 		if (!WriteRawSlice(
-			buf.data(), 
-			buf.size(),
+			tilebuf.data(),
+			tilebuf.size(),
 			&of,
 			pixel_format,
 			transfer_syntax,

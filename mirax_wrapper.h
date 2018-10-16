@@ -45,7 +45,7 @@ struct TileInfo
 	int Height() { return bottom - top + 1; }
 };
 
-struct LevelInfo
+struct PyramidLevel
 {
 	int width;
 	int height;
@@ -53,8 +53,9 @@ struct LevelInfo
 	double pixel_spacing_x;
 	double pixel_spacing_y;
 	Pointf total_matrix_origin;
+	unsigned int fill_color_bgr;
 
-	LevelInfo(int x, int y, double down) 
+	PyramidLevel(int x, int y, double down) 
 	{ 
 		width = x; 
 		height = y; 
@@ -65,6 +66,7 @@ struct LevelInfo
 		pixel_spacing_x = 0.00374999992;
 		// total pixel matrix origin mm
 		total_matrix_origin = Pointf(20.0, 40.0);
+		fill_color_bgr = 0x00ffffff;
 	}
 	
 	std::vector<TileInfo> GetTiles(int tile_w, int tile_h)
@@ -100,7 +102,7 @@ public:
 	bool WriteDicomFile(const char * filename, int level);
 	bool FillWholslideImageModule(gdcm::DataSet & ds, int level);
 	bool FillVariables(gdcm::DataSet & ds);
-	std::vector<char> GetTileData(int level, int tile);
+	bool GetTileData(std::vector<uint8_t> & outbuf, int level, int tile);
 	bool Multiframe(gdcm::DataSet & ds);
 	bool MiraxWrapper::AddPerFrameFunctionalGroups(gdcm::DataSet & ds, int level);
 
@@ -109,7 +111,7 @@ private:
 	uint16_t tile_height;
 	int level_count;
 	openslide_t * openslide_handle;
-	std::vector<LevelInfo> pyramid;
+	std::vector<PyramidLevel> pyramid;
 	gdcm::UIDGenerator uid;
 	int slice_thickness;
 	gdcm::PixelFormat pixel_format;
