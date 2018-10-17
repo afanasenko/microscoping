@@ -28,12 +28,11 @@ void pathsplit(std::string const & path, std::string & parent, std::string & nam
 	size_t sep = path.find_last_of("\\/");
 	if (sep != std::string::npos)
 		parent = path.substr(sep + 1, path.size() - sep - 1);
-	else
-		sep = 0;
 
 	size_t dot = path.find_last_of(".");
 	if (dot != std::string::npos)
 	{
+		size_t namestart = sep == std::string::npos ? 0 : sep + 1;
 		name = path.substr(sep, dot);
 		ext = path.substr(dot, path.size() - dot);
 	}
@@ -43,7 +42,7 @@ void pathsplit(std::string const & path, std::string & parent, std::string & nam
 		ext = "";
 	}
 
-	printf("path: %s\nparent: %s\nname: %s\next: %s\n", path.c_str(), parent.c_str(), name.c_str(), ext.c_str());
+	//printf("path: %s\nparent: %s\nname: %s\next: %s\n", path.c_str(), parent.c_str(), name.c_str(), ext.c_str());
 }
 
 /// Основная функция для преобразования mrxs->dicom и отправки на сервер
