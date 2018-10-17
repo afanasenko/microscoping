@@ -133,7 +133,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>C:\TOOLS\gdcm\Source\Common;E:\gdcm-source\Source\DataDictionary;E:\gdcm-source\Source\Common;E:\gdcm-source\Source\MediaStorageAndFileFormat;E:\gdcm-source\Source\DataStructureAndEncodingDefinition;C:\TOOLS\openslide\include\openslide;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\TOOLS\gdcm\Source\Common;E:\gdcm-source\Source\DataDictionary;E:\gdcm-source\Source\Common;E:\gdcm-source\Source\MediaStorageAndFileFormat;E:\gdcm-source\Source\MessageExchangeDefinition;E:\gdcm-source\Source\DataStructureAndEncodingDefinition;C:\TOOLS\openslide\include\openslide;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -141,12 +141,9 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>C:\TOOLS\gdcm\bin\Release;C:\TOOLS\openslide\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libopenslide.lib;gdcmCommon.lib;gdcmDICT.lib;gdcmDSED.lib;gdcmexpat.lib;gdcmgetopt.lib;gdcmopenjp2.lib;gdcmjpeg8.lib;gdcmjpeg12.lib;gdcmjpeg16.lib;gdcmMSFF.lib;gdcmIOD.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libopenslide.lib;gdcmCommon.lib;gdcmDICT.lib;gdcmDSED.lib;gdcmexpat.lib;gdcmgetopt.lib;gdcmopenjp2.lib;gdcmjpeg8.lib;gdcmjpeg12.lib;gdcmjpeg16.lib;gdcmMSFF.lib;gdcmMEXD.lib;gdcmIOD.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <Text Include="ReadMe.txt" />
-  </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dicom_helpers.h" />
     <ClInclude Include="iccprofile.h" />
@@ -154,10 +151,12 @@
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="writer.h" />
+    <ClInclude Include="wsiconvert.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="mirax_wrapper.cpp" />
     <ClCompile Include="mrxconvert.cpp" />
+    <ClCompile Include="wsiconvert.cpp" />
     <ClCompile Include="writer.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -165,6 +164,9 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="README.md" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

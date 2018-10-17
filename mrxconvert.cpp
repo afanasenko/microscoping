@@ -103,52 +103,16 @@ int _tmain(int argc, wchar_t* argv[])
 	MrxConvertArgs args;
 	ParseArgs(args, argc, argv);
 
-	std::string filename;
-	std::string dicom_filename;
+	DicomMetadata md;
 
-	if (argc > 1)
-	{
-		filename = utf8_encode(argv[1]);
-		if (!fexists(filename.c_str()))
-		{
-			printf("File %s does not exist\n", filename.c_str());
-			return 1;
-		}
-	}
-	else
-	{
-		printf("Input file not specified\n");
-		return 1;
-	}
-
-	if (argc > 2)
-	{
-		dicom_filename = utf8_encode(argv[2]);
-	}
-	else
-	{
-		printf("Output file not specified\n");
-		return 1;
-	}
-	
-	MiraxWrapper mrx;
-	if (!mrx.Open(filename.c_str()))
-	{
-		printf("File not opened\n");
-		return 1;
-	}
-
-	int start_from_level = 4;
-
-	for (int level = start_from_level; level < mrx.GetLevelCount(); ++level)
-	{
-		std::string level_file = insert_filename_suffix(dicom_filename, std::to_string(level));
-		if (!mrx.WriteDicomFile(level_file.c_str(), level))
-		{
-			printf("File %s not written\n", level_file.c_str());
-			return 1;
-		}
-	}
+	auto errorcode = WsiConvert(
+		args.mrx_filename,
+		args.dicom_dir,
+		args.server_hostname,
+		args.port,
+		args.aetitle,
+		md
+	);
 
 	return 0;
 }

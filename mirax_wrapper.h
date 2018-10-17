@@ -2,7 +2,9 @@
 #include <stdint.h>
 
 #include "gdcmDataSet.h"
+#include "gdcmPixelFormat.h"
 #include "gdcmUIDGenerator.h"
+#include "openslide.h"
 
 struct Point
 {
@@ -97,7 +99,6 @@ public:
 	uint16_t GetTileW() { return tile_width; }
 	uint16_t GetTileH() { return tile_height; }
 	int GetLevelCount() { return level_count; }
-	int GetTileCount(int level);
 
 	bool WriteDicomFile(const char * filename, int level);
 	bool FillWholslideImageModule(gdcm::DataSet & ds, int level);

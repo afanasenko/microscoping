@@ -14,7 +14,6 @@
 #include <gdcmTag.h>
 
 #include "gdcmByteValue.h"
-#include "gdcmPixelFormat.h"
 #include "gdcmImageWriter.h"
 #include "gdcmAnonymizer.h"
 #include "gdcmStreamImageWriter.h"
