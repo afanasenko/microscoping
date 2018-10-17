@@ -64,16 +64,10 @@ WsiConvResult WsiConvert(
 	bool dicom_networking = !server_name.empty();
 
 	if (!isfile(input_filename))
-	{
-		printf("Input file %s does not exist\n", input_filename.c_str());
 		return WSICONV_MISSING_INPUT;
-	}
 
 	if (!isdir(dicom_dir))
-	{
-		printf("Output directory %s does not exist\n", dicom_dir.c_str());
 		return WSICONV_INVALID_OUTPUT;
-	}
 
 	std::string input_dir;
 	std::string input_basename;
@@ -82,13 +76,9 @@ WsiConvResult WsiConvert(
 
 	MiraxWrapper mrx;
 	if (!mrx.Open(input_filename.c_str()))
-	{
-		printf("Could not open file %s\n", input_filename.c_str());
 		return WSICONV_INVALID_INPUT;
-	}
 
 	std::vector<std::string> output_filenames;
-
 
 
 	int start_from_level = 4;
@@ -99,14 +89,9 @@ WsiConvResult WsiConvert(
 		sprintf(level_filename, "%s/%s-%05d.dcm", dicom_dir.c_str(), input_basename.c_str(), level);
 
 		if (mrx.WriteDicomFile(level_filename, level))
-		{
 			output_filenames.push_back(level_filename);
-		}
 		else
-		{
-			printf("File %s not written\n", level_filename);
 			return WSICONV_CONVERSION_ERROR;
-		}
 	}
 
 	if (dicom_networking)

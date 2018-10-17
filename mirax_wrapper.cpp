@@ -577,7 +577,7 @@ bool MiraxWrapper::WriteDicomFile(const char * filename, int level)
 			return false;
 		}
 
-		printf("tile %d, %zd bytes\n", ntile, tilebuf.size());
+		//printf("tile %d, %zd bytes\n", ntile, tilebuf.size());
 
 		if (!WriteRawSlice(
 			tilebuf.data(),

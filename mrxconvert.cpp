@@ -114,5 +114,24 @@ int _tmain(int argc, wchar_t* argv[])
 		md
 	);
 
+	switch (errorcode)
+	{
+	case WSICONV_MISSING_INPUT:
+		printf("Input file %s does not exist\n", args.mrx_filename.c_str());
+		break;
+	case WSICONV_INVALID_OUTPUT:
+		printf("Output directory %s does not exist\n", args.dicom_dir.c_str());
+		break;
+	case WSICONV_INVALID_INPUT:
+		printf("File %s is corrupted\n", args.mrx_filename.c_str());
+		break;
+	case WSICONV_CONVERSION_ERROR:
+		printf("Conversion error\n");
+		break;
+	case WSICONV_NO_SERVER:
+		printf("Could not connect to server %s\n", args.server_hostname.c_str());
+		break;
+	}
+
 	return 0;
 }
