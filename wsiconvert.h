@@ -14,7 +14,15 @@ enum WsiConvResult
 
 struct DicomMetadata
 {
-	std::string patientname;
+	std::string patient_firstname;
+	std::string patient_lastname;
+	std::string patient_middlename;
+	std::string patient_sex;
+	std::string patient_birthday;
+	std::string patient_age;
+	std::string physician_firstname;
+	std::string physician_lastname;
+	std::string physician_middlename;
 };
 
 /// Основная функция для преобразования mrxs->dicom и отправки на сервер
