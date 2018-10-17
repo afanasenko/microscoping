@@ -8,7 +8,7 @@
 #include <vector>
 #include <Windows.h>
 #include "writer.h"
-#include "mirax_wrapper.h"
+#include "wsiconvert.h"
 
 using namespace std;
 
@@ -66,8 +66,43 @@ std::wstring utf8_decode(const std::string &str)
     return wstrTo;
 }
 
+struct MrxConvertArgs
+{
+	std::string mrx_filename;
+	std::string dicom_dir;
+	std::string server_hostname;
+	uint16_t port;
+	std::string aetitle;
+
+	MrxConvertArgs()
+	{
+		server_hostname = "localhost";
+		port = 104;
+	}
+};
+
+void ParseArgs(MrxConvertArgs & args, int argc, wchar_t* argv[])
+{
+	for (int narg = 1; narg < argc -1; ++narg)
+	{
+		if (std::wstring(argv[narg]) == L"-i")
+			args.mrx_filename = utf8_encode(argv[narg+1]);
+		else if (std::wstring(argv[narg]) == L"-o")
+			args.dicom_dir = utf8_encode(argv[narg + 1]);
+		else if (std::wstring(argv[narg]) == L"--hostname")
+			args.server_hostname = utf8_encode(argv[narg + 1]);
+		else if (std::wstring(argv[narg]) == L"--port")
+			args.port = atoi(utf8_encode(argv[narg + 1]).c_str());
+		else if (std::wstring(argv[narg]) == L"--aetitle")
+			args.aetitle = atoi(utf8_encode(argv[narg + 1]).c_str());
+	}
+}
+
 int _tmain(int argc, wchar_t* argv[])
 {
+	MrxConvertArgs args;
+	ParseArgs(args, argc, argv);
+
 	std::string filename;
 	std::string dicom_filename;
 
@@ -117,4 +152,3 @@ int _tmain(int argc, wchar_t* argv[])
 
 	return 0;
 }
-
