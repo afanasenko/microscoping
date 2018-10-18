@@ -1,4 +1,4 @@
-#pragma once
+Ôªø#pragma once
 
 enum WsiConvResult
 {
@@ -25,13 +25,13 @@ struct DicomMetadata
 	std::string physician_middlename;
 };
 
-/// ŒÒÌÓ‚Ì‡ˇ ÙÛÌÍˆËˇ ‰Îˇ ÔÂÓ·‡ÁÓ‚‡ÌËˇ mrxs->dicom Ë ÓÚÔ‡‚ÍË Ì‡ ÒÂ‚Â
-/// \param input_filename œÛÚ¸ Í Ù‡ÈÎÛ .mrxs
-/// \param dicom_dir ËÏˇ Í‡Ú‡ÎÓ„‡, ‚ ÍÓÚÓ˚È ·Û‰ÛÚ Á‡ÔËÒ‡Ì˚ dcm-Ù‡ÈÎ˚
-/// \param server_name ËÏˇ ËÎË IP-‡‰ÂÒ DICOM-ÒÂ‚Â‡ ‰Îˇ ÓÚÔ‡‚ÍË. ≈ÒÎË ÔÛÒÚÓÂ - ÌË˜Â„Ó ÌÂ ¯ÎÂÏ Ì‡ ÒÂ‚Â
-/// \param port ÌÓÏÂ ÔÓÚ‡, Ì‡ ÍÓÚÓÓÏ ‡·ÓÚ‡ÂÚ DICOM-ÒÂ‚Â
-/// \param aetitle Ì‡Á‚‡ÌËÂ DICOM-ÒÂ‚Â‡, ÔÓÔËÒ‡ÌÌÓÂ ‚ Â„Ó Ì‡ÒÚÓÈÍ‡ı
-/// \return ÍÓ‰ Ó¯Ë·ÍË (ÒÏ. WsiConvResult)
+/// –û—Å–Ω–æ–≤–Ω–∞—è —Ñ—É–Ω–∫—Ü–∏—è –¥–ª—è –ø—Ä–µ–æ–±—Ä–∞–∑–æ–≤–∞–Ω–∏—è mrxs->dicom –∏ –æ—Ç–ø—Ä–∞–≤–∫–∏ –Ω–∞ —Å–µ—Ä–≤–µ—Ä
+/// \param input_filename –ü—É—Ç—å –∫ —Ñ–∞–π–ª—É .mrxs
+/// \param dicom_dir –∏–º—è –∫–∞—Ç–∞–ª–æ–≥–∞, –≤ –∫–æ—Ç–æ—Ä—ã–π –±—É–¥—É—Ç –∑–∞–ø–∏—Å–∞–Ω—ã dcm-—Ñ–∞–π–ª—ã
+/// \param server_name –∏–º—è –∏–ª–∏ IP-–∞–¥—Ä–µ—Å DICOM-—Å–µ—Ä–≤–µ—Ä–∞ –¥–ª—è –æ—Ç–ø—Ä–∞–≤–∫–∏. –ï—Å–ª–∏ –ø—É—Å—Ç–æ–µ - –Ω–∏—á–µ–≥–æ –Ω–µ —à–ª–µ–º –Ω–∞ —Å–µ—Ä–≤–µ—Ä
+/// \param port –Ω–æ–º–µ—Ä –ø–æ—Ä—Ç–∞, –Ω–∞ –∫–æ—Ç–æ—Ä–æ–º —Ä–∞–±–æ—Ç–∞–µ—Ç DICOM-—Å–µ—Ä–≤–µ—Ä
+/// \param aetitle –Ω–∞–∑–≤–∞–Ω–∏–µ DICOM-—Å–µ—Ä–≤–µ—Ä–∞, –ø—Ä–æ–ø–∏—Å–∞–Ω–Ω–æ–µ –≤ –µ–≥–æ –Ω–∞—Å—Ç—Ä–æ–π–∫–∞—Ö
+/// \return –∫–æ–¥ –æ—à–∏–±–∫–∏ (—Å–º. WsiConvResult)
 WsiConvResult WsiConvert(
 	std::string const & input_filename,
 	std::string const & dicom_dir,
