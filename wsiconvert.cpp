@@ -96,8 +96,24 @@ WsiConvResult WsiConvert(
 
 	if (dicom_networking)
 	{
-		if (!gdcm::CompositeNetworkFunctions::CEcho(server_name.c_str(), (uint16_t)port, "wsiconv", aetitle.c_str()))
+		std::string scutitle("wsiconv");
+
+		if (!gdcm::CompositeNetworkFunctions::CEcho(
+			server_name.c_str(), 
+			(uint16_t)port,
+			scutitle.c_str(), 
+			aetitle.c_str()
+			))
 			return WSICONV_NO_SERVER;
+
+		if (!gdcm::CompositeNetworkFunctions::CStore(
+			server_name.c_str(),
+			(uint16_t)port,
+			output_filenames,
+			scutitle.c_str(),
+			aetitle.c_str()
+			))
+			return WSICONV_STORE_ERROR;
 	}
 
 	return WSICONV_OK;

@@ -131,6 +131,9 @@ int _tmain(int argc, wchar_t* argv[])
 	case WSICONV_NO_SERVER:
 		printf("Could not connect to server %s\n", args.server_hostname.c_str());
 		break;
+	case WSICONV_STORE_ERROR:
+		printf("C-STORE error\n");
+		break;
 	}
 
 	return 0;
